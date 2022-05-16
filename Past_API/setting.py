@@ -9,33 +9,23 @@ class Setting:
     datadump = "https://cve.circl.lu/static/circl-cve-search-expanded.json.gz"
     savedir = "../data/"
     savezip = ""
-    savepath = "../data/cve_data.json"
-    status = ""
+    savepath = ""
 
     def __init__(self):
         d = datetime.datetime.now()
         file_list = os.listdir(self.savedir)
-        gzip_file = ""
-        for i in file_list:
-            text = i.split('.')[-1]
-            if text in "gz":
-                gzip_file = i
+        dataset_file = ""
+        for name in file_list:
+            if name in "cve_data" and name.split('.')[-1] in "xlsx":
+                dataset_file = name
                 break
 
-        newFilename = self.savedir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".json.gz"
-        if len(gzip_file) == 0:
-            self.savezip = newFilename
-            status = "None"
-        else:
-            gzip_file = self.savedir + gzip_file
-            if newFilename != gzip_file:
-                self.savezip = newFilename
-                status = "Update"
-            else:
-                self.savezip = gzip_file
-                status = "Had"
+        newFilename = "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + "xlsx"
+        if len(dataset_file) == 0 or newFilename != dataset_file:
+            self.download_open()
 
-    def download(self):
+    def download_open(self):
+        self.savezip = self.savedir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".json.gz"
         with get(self.datadump, stream=True) as r:
             r.raise_for_status()
             with open(self.savezip, "wb") as file:
@@ -44,18 +34,10 @@ class Setting:
                     if chunk:
                         file.write(chunk)
                         # pbar.update(len(chunk))
-
-    def open_gz(self):
+        self.savepath = self.savedir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".json"
         with open(self.savepath, 'wb') as f:
             with gzip.open(self.savezip, 'rb') as ff:
                 file_content = ff.read()
                 f.write(file_content)
-
-    def clean_dataset(self, sy, ey):
         json_df = pd.read_json(self.savepath, lines=True)
-        json_df.to_excel(self.savedir + 'dataset.xlsx',engine='xlsxwriter')
-
-# testing code
-# if __name__ == "__main__" :
-#     test = MakeDataset()
-#     test.clean_dataset(2019,2020)
+        json_df.to_excel(self.savedir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".xlsx",engine='xlsxwriter')
