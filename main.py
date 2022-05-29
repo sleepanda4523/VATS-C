@@ -12,18 +12,12 @@ import datetime
 import os.path
 import time
 
+combobox = ['CVSS', 'CWE', 'Product']
 
-class MainWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-
-    def initUI(self):
-        vbox = QVBoxLayout()
 
 class TheradDownload(QThread):
     pbar_value = pyqtSignal(int)
-    end_signal = pyqtSignal(int)
+    end_signal = pyqtSignal()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -42,7 +36,7 @@ class TheradDownload(QThread):
         down_url = "https://cve.circl.lu/static/circl-cve-search-expanded.json.gz"
         self.parent.savezip = self.parent.dir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".json.gz"
         request.urlretrieve(down_url, self.parent.savezip, self.Handle_Progress)
-        self.end_signal.emit(1)
+        self.end_signal.emit()
         self.stop()
 
     def stop(self):
@@ -79,7 +73,6 @@ class TheradUnzip(QThread, Core):
         self.power = False
         self.quit()
         self.wait(3000)
-
 
 class Download(QDialog, Core):
     dir = "./data/"
@@ -127,6 +120,33 @@ class Download(QDialog, Core):
         d.start()
 
 
+class MainWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        select1 = QComboBox(self)
+        select2 = QComboBox(self)
+        select1.setFixedSize(120, 60)
+        select2.setFixedSize(120, 60)
+        select1.addItems(combobox)
+        select2.addItems(combobox)
+
+        # layout
+        hbox = QHBoxLayout()
+        hbox.addStretch(1)
+        hbox.addWidget(select1)
+        hbox.addStretch(1)
+        hbox.addWidget(select2)
+        hbox.addStretch(1)
+
+        vbox = QVBoxLayout()
+        vbox.addLayout(hbox)
+        vbox.addStretch(4)
+
+        self.setLayout(vbox)
+
 
 
 
@@ -168,11 +188,12 @@ class MainWindow(QMainWindow, Core):
         self.setCentralWidget(self.mainWidget)
         self.setWindowTitle('VATS-C')
         self.setWindowIcon(QIcon("icons/bat.png"))
+        self.setMinimumSize(480, 320)
         self.setGeometry(800, 300, 960, 640)
-        self.show()
 
 
 if __name__ == '__main__':
    app = QApplication(sys.argv)
    ex = MainWindow()
+   ex.show()
    sys.exit(app.exec_())
