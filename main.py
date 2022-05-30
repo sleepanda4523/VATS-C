@@ -14,6 +14,11 @@ import time
 
 combobox = ['CVSS', 'CWE', 'Product']
 
+class QComboBox(QComboBox):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+
 
 class TheradDownload(QThread):
     pbar_value = pyqtSignal(int)
@@ -126,26 +131,31 @@ class MainWidget(QWidget):
         self.initUI()
 
     def initUI(self):
+        # comboBoxs
+        lbl1 = QLabel("Select1: ")
+        lbl1.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Ignored)
+
+        lbl2 = QLabel("Select2: ")
+        lbl2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Ignored)
+
         select1 = QComboBox(self)
-        select2 = QComboBox(self)
-        select1.setFixedSize(120, 60)
-        select2.setFixedSize(120, 60)
         select1.addItems(combobox)
+        select2 = QComboBox(self)
         select2.addItems(combobox)
 
-        # layout
-        hbox = QHBoxLayout()
-        hbox.addStretch(1)
-        hbox.addWidget(select1)
-        hbox.addStretch(1)
-        hbox.addWidget(select2)
-        hbox.addStretch(1)
+        comboLayout = QGridLayout()
+        comboLayout.addWidget(lbl1, 0, 0)
+        comboLayout.addWidget(lbl2, 1, 0)
+        comboLayout.addWidget(select1, 0, 1)
+        comboLayout.addWidget(select2, 1, 1)
 
-        vbox = QVBoxLayout()
-        vbox.addLayout(hbox)
-        vbox.addStretch(4)
+        download_btn = QPushButton('Download Result', self)
+        download_btn.setMinimumSize(100, 50)
+        download_btn.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        comboLayout.addItem(QSpacerItem(30, 0, QSizePolicy.Fixed, QSizePolicy.Ignored), 0, 2)
+        comboLayout.addWidget(download_btn, 0, 3, 2, 1)
 
-        self.setLayout(vbox)
+        self.setLayout(comboLayout)
 
 
 
@@ -188,8 +198,8 @@ class MainWindow(QMainWindow, Core):
         self.setCentralWidget(self.mainWidget)
         self.setWindowTitle('VATS-C')
         self.setWindowIcon(QIcon("icons/bat.png"))
-        self.setMinimumSize(480, 320)
-        self.setGeometry(800, 300, 960, 640)
+        self.setMinimumSize(320, 420)
+        self.setGeometry(800, 300, 640, 640)
 
 
 if __name__ == '__main__':
