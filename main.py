@@ -13,6 +13,9 @@ import os.path
 import time
 
 combobox = ['CVSS', 'CWE', 'Product']
+deletecol = ['Modified', 'access', 'assigner', 'capec', 'last-modified', 'vulnerable_configuration'
+    , 'vulnerable_configuration_cpe_2_2', 'refmap', 'redhat', 'oval', 'saint', 'statements', 'd2sec', 'msbulletin'
+]
 
 class QComboBox(QComboBox):
     def __init__(self, parent = None):
@@ -58,18 +61,36 @@ class TheradUnzip(QThread, Core):
 
     def run(self):
         self.label_signal.emit('unzip dataset file..')
-
+        today = datetime.datetime.today().strftime('%Y-%m')
+        cve_df_name = self.dir + "cve_data_" + today + ".xlsx"
         try :
-            self.savezip = self.dir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".json.gz"
-            self.savejson = self.dir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".json"
+            self.savezip = self.dir + "cve_data_" + today + ".json.gz"
+            self.savejson = self.dir + "cve_data_" + today + ".json"
             with open(self.savejson, 'wb') as f:
                 with gzip.open(self.savezip, 'rb') as ff:
                     file_content = ff.read()
                     f.write(file_content)
             self.label_signal.emit('make dataset file..')
             json_df = pd.read_json(self.savejson, lines=True)
-            json_df.to_excel(self.dir + "cve_data_" + datetime.datetime.today().strftime('%Y-%m') + ".xlsx", engine='xlsxwriter')
+            json_df = self.clean_dataset(json_df, deletecol)
+            json_df.to_excel(cve_df_name, engine='xlsxwriter')
             os.remove(self.savejson)
+            print(json_df.info)
+
+            self.label_signal.emit('make cvss dataset file..')
+            cvss_df = self.makeCVSSdataset(json_df)
+            print('check cvss')
+            cvss_df.to_excel(self.dir + "cve_data_cvss_"+today+".xlsx", engine='xlsxwriter')
+
+            self.label_signal.emit('make freq dataset file..')
+            freq_df = self.makeFreqdataset(json_df)
+            print('check freq')
+            freq_df.to_excel(self.dir + "cve_data_freq_" + today + ".xlsx", engine='xlsxwriter')
+
+            self.label_signal.emit('make product dataset file..')
+            product_df = self.makeProductdataset(json_df)
+            print('check product')
+            product_df.to_excel(self.dir + "cve_data_freq_" + today + ".xlsx", engine='xlsxwriter')
             self.end_signal.emit()
         except Exception as e:
             print(e)
@@ -110,7 +131,6 @@ class Download(QDialog, Core):
         self.setLayout(layout)
         self.show()
 
-
     def start(self):
         d = TheradDownload(self)
         d.pbar_value.connect(self.pbar.setValue)
@@ -119,13 +139,13 @@ class Download(QDialog, Core):
 
     def open(self):
         d = TheradUnzip(self)
-        self.pbar.close()
+        self.pbar.setRange(0, 0)
         d.label_signal.connect(self.label.setText)
         d.end_signal.connect(self.close)
         d.start()
 
 
-class MainWidget(QWidget):
+class MainWidget(QWidget, Core):
     def __init__(self):
         super().__init__()
         self.initUI()
