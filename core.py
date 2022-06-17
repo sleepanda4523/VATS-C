@@ -30,18 +30,22 @@ class Core:
 
     def selectcpe(self, cpe_df):
         cpe_list = {'Type':[], 'Vendors':[], 'Product':[], 'Version':[]}
-        for column_name, item in cpe_df.iteritems():    # TODO : "list index out of range"에러 수정 필요
-            cpe_data = item[0].split(':')
-            cpe_list['Type'].append(cpe_data[2])
-            cpe_list['Vendors'].append(cpe_data[3])
-            cpe_list['Product'].append(cpe_data[4])
-            cpe_list['Version'].append(cpe_data[5])
-        print('debug')
-        cpe_df['Type'] = cpe_list['Type']
-        cpe_df['Vendors'] = cpe_list['Vendors']
-        cpe_df['Product'] = cpe_list['Product']
-        cpe_df['Version'] = cpe_list['Version']
-        return cpe_df
+        for column_name, item in cpe_df.iteritems():
+            if item:
+                cpe_data = item[0].split(':')
+                cpe_list['Type'].append(cpe_data[2])
+                cpe_list['Vendors'].append(cpe_data[3])
+                cpe_list['Product'].append(cpe_data[4])
+                if cpe_data[5] != '-':
+                    cpe_list['Version'].append(cpe_data[5])
+                else:
+                    cpe_list['Version'].append('*')
+            else:
+                cpe_list['Type'].append('*')
+                cpe_list['Vendors'].append('*')
+                cpe_list['Product'].append('*')
+                cpe_list['Version'].append('*')
+        return cpe_list
 
     def clean_dataset(self, df, del_col):
         # Modify Dataset
@@ -93,8 +97,10 @@ class Core:
         return freq_df
 
     def makeProductdataset(self, df):
-        cpe_df = self.selectcpe(df['vulnerable_product'])
-        return cpe_df
+        cpe_list = self.selectcpe(df['vulnerable_product'])
+        for i in cpe_list.keys():
+            df[i] = cpe_list[i]
+        return df
 
 
 

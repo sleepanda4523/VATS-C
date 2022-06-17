@@ -75,22 +75,18 @@ class TheradUnzip(QThread, Core):
             json_df = self.clean_dataset(json_df, deletecol)
             json_df.to_excel(cve_df_name, engine='xlsxwriter')
             os.remove(self.savejson)
-            print(json_df.info)
 
             self.label_signal.emit('make cvss dataset file..')
             cvss_df = self.makeCVSSdataset(json_df)
-            print('check cvss')
             cvss_df.to_excel(self.dir + "cve_data_cvss_"+today+".xlsx", engine='xlsxwriter')
 
             self.label_signal.emit('make freq dataset file..')
             freq_df = self.makeFreqdataset(json_df)
-            print('check freq')
             freq_df.to_excel(self.dir + "cve_data_freq_" + today + ".xlsx", engine='xlsxwriter')
 
             self.label_signal.emit('make product dataset file..')
             product_df = self.makeProductdataset(json_df)
-            print('check product')
-            product_df.to_excel(self.dir + "cve_data_freq_" + today + ".xlsx", engine='xlsxwriter')
+            product_df.to_excel(self.dir + "cve_data_product_" + today + ".xlsx", engine='xlsxwriter')
             self.end_signal.emit()
         except Exception as e:
             print(e)
