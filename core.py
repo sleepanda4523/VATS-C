@@ -6,6 +6,7 @@ import swifter
 import datetime
 import os.path
 from cwe import Database
+from typing import List
 
 class Core:
     datadump = "https://cve.circl.lu/static/circl-cve-search-expanded.json.gz"
@@ -14,10 +15,36 @@ class Core:
     savejson = ""
     db = Database()
 
+    def optimize_floats(self, df: pd.DataFrame) -> pd.DataFrame:
+        floats = df.select_dtypes(include=['float64']).columns.tolist()
+        df[floats] = df[floats].apply(pd.to_numeric, downcast='float')
+        return df
+
+    def optimize_ints(self, df: pd.DataFrame) -> pd.DataFrame:
+        ints = df.select_dtypes(include=['int64']).columns.tolist()
+        df[ints] = df[ints].apply(pd.to_numeric, downcast='integer')
+        return df
+
+    def optimize_objects(self, df: pd.DataFrame, datetime_features: List[str]) -> pd.DataFrame:
+        for col in df.select_dtypes(include=['object']):
+            if col not in datetime_features:
+                if not (type(df[col][0]) == list):
+                    num_unique_values = len(df[col].unique())
+                    num_total_values = len(df[col])
+                    if float(num_unique_values) / num_total_values < 0.5:
+                        df[col] = df[col].astype('category')
+            else:
+                df[col] = pd.to_datetime(df[col])
+        return df
+
+    def optimize(self, df: pd.DataFrame, datetime_features: List[str] = []):
+        return self.optimize_floats(self.optimize_ints(self.optimize_objects(df, datetime_features)))
+
+
     def plus_des(self, df):
         cwe_des = ['' for i in range(df.shape[0])]
         for i in range(0, df.shape[0]):
-            num = df.iloc[i, 2].split('-')[1]
+            num = df.iloc[i, 0].split('-')[1]
             if num == 'CWE':
                 num = 0
             week = self.db.get(int(num))
@@ -25,7 +52,7 @@ class Core:
                 cwe_des[i] = np.NaN
             else:
                 cwe_des[i] = week.description
-        df['CWE-DES'] = cwe_des
+        df['cwe-des'] = cwe_des
         return df
 
     def selectcpe(self, cpe_df):
@@ -48,8 +75,16 @@ class Core:
         return cpe_list
 
     def clean_dataset(self, df, del_col):
+        # year filter
+        year = [i for i in range(2020, 2022 + 1)] # TODO : 임시.
+        year_str = ""
+        for i in year:
+            year_str += ('CVE-' + str(i) + '|')
+        year_str = year_str[:-1]
+        contain = df['id'].str.contains(year_str)
+        subset_df = df[contain].sort_values(by='id')
         # Modify Dataset
-        subset_df = df.drop(df.loc[df['cvss'].isnull()].index)
+        subset_df = subset_df.drop(subset_df.loc[subset_df['cvss'].isnull()].index)
         subset_df = subset_df.drop(subset_df.loc[subset_df['cwe'] == 'Unknown'].index)
         subset_df = subset_df.drop_duplicates(subset=['id']).sort_values(by='id')
         subset_df.drop(del_col, axis=1, inplace=True)
@@ -88,13 +123,14 @@ class Core:
         cvss_df.reset_index().drop(['index'], axis=1)
         return cvss_df
 
-    def makeFreqdataset(self, df):
+    def makeCWEdataset(self, df):
         cwe_data = df.replace('Nop', np.NaN)['cwe'].value_counts(sort=True, dropna=True).reset_index(
             name='count')
-        select_df = df.drop(['id', 'cvss'], axis=1)
-        freq_df = pd.merge(cwe_data.rename(columns={'index': 'cwe'}), select_df.drop_duplicates(['cwe']))
-        #freq_df = self.plus_des(freq_df)
-        return freq_df
+
+        cwe_df = cwe_data.rename(columns={'index': 'cwe'})
+        print(cwe_df)
+        cwe_df = self.plus_des(cwe_df)
+        return cwe_df
 
     def makeProductdataset(self, df):
         cpe_list = self.selectcpe(df['vulnerable_product'])
