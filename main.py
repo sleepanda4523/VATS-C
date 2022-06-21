@@ -132,8 +132,7 @@ class ThreadSave(QThread, Core):
 
     def run(self):
         self.label_signal.emit("Save Dataset...")
-        today = datetime.datetime.today().strftime('%Y-%m')
-        self.df.to_excel(self.FileSave[0]+'result.xlsx', index_label=False, engine='xlsxwriter')
+        self.df.to_excel(self.FileSave+'/result.xlsx', index_label=False, engine='xlsxwriter')
         self.end_signal.emit()
 
 
